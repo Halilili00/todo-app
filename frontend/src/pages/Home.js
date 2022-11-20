@@ -41,7 +41,7 @@ const Home = () => {
     axios
       .post("/api/todos/", item)
       .then((res) => getData());
-    alert("saved" + JSON.stringify(item));
+    //alert("saved" + JSON.stringify(item));
   };
 
   const handleDelete = (item) => {
