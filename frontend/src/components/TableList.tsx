@@ -1,57 +1,101 @@
-import React from 'react'
-import { Item } from '../types/Item'
-import { IconButton, List, ListItem, ListItemText, Stack } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DoneIcon from '@mui/icons-material/Done';
+import React, { memo } from 'react'
+import { Item, Items } from '../types/Item'
+import { Card, CardContent, CardHeader, Grid } from '@mui/material';
+import { removeTodo, updateTodo } from '../apis/TodoApis';
+import { Droppable } from 'react-beautiful-dnd';
+import "./style.css"
+import TableItem from './TableItem';
+
 
 interface Props {
-    todos: Item[];
-    setTodos: React.Dispatch<React.SetStateAction<Item[]>>;
+    todos: Items[];
+    setTodos: React.Dispatch<React.SetStateAction<Items[]>>;
     modal: boolean;
     setModal: React.Dispatch<React.SetStateAction<boolean>>;
     setTodo: React.Dispatch<React.SetStateAction<Item>>
+    completedTodos: Items[];
+    setCompletedTodos: React.Dispatch<React.SetStateAction<Items[]>>
 }
 
-const TableList = ({todos, setTodos, modal, setModal, setTodo}: Props) => {
+const TableList = ({ todos, setTodos, modal, setModal, setTodo, completedTodos, setCompletedTodos }: Props) => {
 
-    const handleComplete = (id:number) => {
-        setTodos(todos.map(todo => todo.id === id ? {...todo, completed: !todo.completed} : todo));
-    }
-    
-    const handleDelete = (id:number) => {
-        setTodos(todos.filter(todo => todo.id !== id));
+    const handleComplete = (todo: Items) => {
+        if (todo.id) {
+            const newTodo = { ...todo, completed: !todo.completed }
+            updateTodo(todo.id, newTodo)
+            if (!todo.completed) {
+                setCompletedTodos(completedTodos => {
+                    return [...completedTodos, newTodo]
+                })
+                setTodos(todos => {
+                    return todos.filter(td => td.id !== newTodo.id)
+                })
+            } else {
+                setTodos(todos => {
+                    return [...todos, newTodo]
+                });
+                setCompletedTodos(completedTodos => {
+                    return completedTodos.filter(ctd => ctd.id !== newTodo.id)
+                })
+            }
+        }
     }
 
-    const handleEdit = (todo:Item) => {
+    const handleDelete = (id: number, completed: boolean) => {
+        if (id) {
+            removeTodo(id)
+            if (completed) {
+                setCompletedTodos(completedTodos.filter(todo => todo.id !== id))
+            } else {
+                setTodos(todos.filter(todo => todo.id !== id));
+            }
+        }
+    }
+
+    const handleEdit = (todo: Item) => {
         setModal(!modal)
         setTodo(todo)
     }
 
-  return (
-    <List style={{margin: "10px"}}>
-    {todos.map((todo) => (
-        <ListItem key={todo.id} style={{backgroundColor: "whitesmoke", marginBottom: "10px", borderRadius: "10px"}}
-        secondaryAction={
-            <Stack direction="row">
-                <IconButton onClick={() => handleDelete(todo.id)}>
-                    <DeleteIcon/>
-                </IconButton>
-                <IconButton onClick={() => handleEdit(todo)}>
-                    <EditIcon/>
-                </IconButton>
-                <IconButton onClick={() => handleComplete(todo.id)}>
-                    <DoneIcon/>
-                </IconButton>
-            </Stack>
-        }
-        >
-            {todo.completed ? <ListItemText primary={<s>{todo.title}</s>} secondary={<s>{todo.description}</s>}/> 
-            : <ListItemText primary={<span>{todo.title}</span>} secondary={<span>{todo.description}</span>}/>}
-        </ListItem>
-    ))}
-</List>
-  )
+    console.log("tablelist")
+    return (
+        <Grid container>
+            <Grid item xs={6} style={{ backgroundColor: "white" }}>
+                <Card style={{ backgroundColor: "red" }}>
+                    <CardHeader style={{ color: "white" }} title="Incompleted" />
+                    <CardContent>
+                        <Droppable droppableId='TodosList'>
+                            {(provided) => (
+                                <div ref={provided.innerRef} {...provided.droppableProps}>
+                                    {todos.map((todo, index) => (
+                                        <TableItem key={todo.id} todo={todo} index={index} handleDelete={handleDelete} handleEdit={handleEdit} handleComplete={handleComplete} />
+                                    ))}
+                                    {provided.placeholder}
+                                </div>
+                            )}
+                        </Droppable>
+                    </CardContent>
+                </Card>
+            </Grid>
+            <Grid item xs={6}>
+                <Card style={{ backgroundColor: "green" }}>
+                    <CardHeader style={{ color: "white" }} title="Completed" />
+                    <CardContent>
+                        <Droppable droppableId='TodosRemove' >
+                            {(provided) => (
+                                <div ref={provided.innerRef} {...provided.droppableProps}>
+                                    {completedTodos.map((todo, index) => (
+                                        <TableItem key={todo.id} todo={todo} index={index} handleDelete={handleDelete} handleEdit={handleEdit} handleComplete={handleComplete} />
+                                    ))}
+                                    {provided.placeholder}
+                                </div>
+                            )}
+                        </Droppable>
+                    </CardContent>
+                </Card>
+            </Grid>
+        </Grid >
+    )
 }
 
-export default TableList
+export default memo(TableList)
